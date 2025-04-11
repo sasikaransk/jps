@@ -5,7 +5,7 @@ const { threads } = pkg;
 const handler = async (message, { conn, args }) => {
   // Check if the URL is provided in the command arguments
   if (!args[0]) {
-    throw '✳️ Enter the Instagram Threads Video link next to the command';
+    throw '✳️ Enter the Instagram Threads link next to the command';
   }
 
   // Validate the URL format for Instagram Threads
@@ -52,7 +52,7 @@ const handler = async (message, { conn, args }) => {
     const mimeType = video ? 'video/mp4' : 'image/jpeg';
 
     // Send the media file to the user
-    await conn.sendFile(message.chat, mediaBuffer, fileName, '*ᴘᴏᴡᴇʀᴇᴅ ʙʏ © ɢʟᴏʙᴀʟᴛᴇᴄʜɪɴꜰᴏ*', message, false, { mimetype: mimeType });
+    await conn.sendFile(message.chat, mediaBuffer, fileName, '*© JPS*', message, false, { mimetype: mimeType });
 
     // React with a success emoji
     message.react('✅');

@@ -7,11 +7,9 @@ const { levelling } = '../lib/levelling.js'
 import moment from 'moment-timezone'
 import { promises } from 'fs'
 import { join } from 'path'
-const OwnerName = process.env.OWNER_NAME || 'QASIM ALI';
-const BOTNAME = process.env.BOTNAME || 'MEGA-AI';
-const timeZone = process.env.TIME_ZONE || 'Asia/Karachi';
-const time = moment.tz(timeZone).format('HH');
-let wib = moment.tz(timeZone).format('HH:mm:ss');
+const time = moment.tz('Asia/Colombo').format('HH')
+let wib = moment.tz('Asia/Colombo').format('HH:mm:ss')
+//import db from '../lib/database.js'
 
 let handler = async (m, { conn, usedPrefix, command}) => {
     let d = new Date(new Date + 3600000)
@@ -40,58 +38,38 @@ let quote = quotes[Math.floor(Math.random() * quotes.length)];
 let taguser = '@' + m.sender.split("@s.whatsapp.net")[0]
 let str = `
 🚀 *_Buckle up ${name}, ${greeting}! We're going on an adventure!_* 🚀
-📋 *_Quote of the day: ${quote}_* 📋
-◈╭──❍「 *USER INFO* 」❍
-◈├• 🦸 *Owner:* ${OwnerName}
-◈├• 🏆 *Rank:* ${role}
-◈├• 🎮 *XP:* ${exp} 
-◈├• 🎩 *USER*:${username}
-◈╰─┬─★─☆──♪♪─❍
-◈╭─┴❍「 *BOT STATUS* 」❍
-◈├• 📆  *Date:* ${date}
-◈├• ⏲️  *Time:* ${wib}
-◈├• 🤡  *Bot:* ${botname} 
-◈├• 📣  *Prefix:* ${usedPrefix} 
-◈├• 🕓  *Uptime:* ${uptime}
-◈├• 💌  *Database:* ${rtotalreg} of ${totaluser} 
-◈├• 📚  *Total Users:* ${totaluser}
-◈╰─┬─★─☆──♪♪─❍
-◈╭─┴❍「 *MAIN MENU* 」❍
-◈├• *allmenu*
-◈├• *aimenu*
-◈├• *aeditor*
-◈├• *animemenu*
-◈├• *autoreact*
-◈├• *botmenu*
-◈├• *dlmenu*
-◈├• *economy*
-◈├• *enable*
-◈├• *fancy*
-◈├• *funmenu*
-◈├• *gamesmenu*
-◈├• *groupmenu*
-◈├• *imagen*
-◈├• *infoanime*
-◈├• *listmenu*
-◈├• *listplugin*
-◈├• *logomenu*
-◈├• *makermenu*
-◈├• *menu*
-◈├• *menu3*
-◈├• *menu4*
-◈├• *nsfwmenu*
-◈├• *randompic*
-◈├• *randomvid*
-◈├• *reactions*
-◈├• *stickermenu*
-◈├• *textpro*
-◈├• *toolsmenu*
-◈├• *ownermenu*
-◈├• *setprivacy*
-◈╰─♪♪─★─☆──♪♪─❍
-© *GlobalTechInfo*
 
-> 💡 *_Remember, when in doubt, use ${usedPrefix}listmenu or ${usedPrefix}help It's like my magic spell book!_* 💡
+📋 *_Quote of the day: ${quote}_* 📋
+> ➠ *Bot Name* : *JPS Bot*
+> ➠ *Version*     : *1.0.0*
+> ➠ *Type*          : *Whatsapp Premium Bot*
+> ➠ *Creator*     : *K. Sasikaran*
+> ➠ *Platform*   : *LINUX*
+
+◈┏━⟪ MENU ⟫━━⦿
+◈┃• fb           - Facebook Video
+◈┃• ytv         - Youtube Video
+◈┃• ytv2       - Youtube Video
+◈┃• yta         - Youtube Audio
+◈┃• yts         - Youtube Search
+◈┃• twitter   - Twitter
+◈┃• insta      - Instagram
+◈┃• tiktok     - Tiktok
+◈┃• threads  - Threads
+◈┃• gdrive    - Google Drive
+◈┃• mega     - Mega
+◈┃• movie    - Movie Detail
+◈┃• qr           - Text to QR Code
+◈┃• ping       - Test Bot
+◈┃• owner    - Owner Details
+◈┗━♪♪━★━☆━⦿
+
+© JPS\n
+* Join our Community *
+
+ https://chat.whatsapp.com/EpvlhhwuJkt4PYaQmM7b5T
+
+> 💡 *_Remember, சந்தேகம் இருப்பின், ${usedPrefix}menu என டைப் செய்யவும். Bot இனை அளவுக்கு அதிகமாக மற்றும்  முறைகேடாக பாவிக்க வேண்டாம்!!_* 💡
 `
 
     
@@ -116,7 +94,7 @@ function clockString(ms) {
     return [h, m, s].map(v => v.toString().padStart(2, 0)).join(':')}
     
     function ucapan() {
-      const time = moment.tz('Asia/Karachi').format('HH')
+      const time = moment.tz('Asia/Colombo').format('HH')
       let res = "happy early in the day☀️"
       if (time >= 4) {
         res = "Good Morning 🌄"

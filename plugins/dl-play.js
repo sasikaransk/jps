@@ -1,189 +1,108 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import fs from 'fs';
-import path from 'path';
-import fetch from 'node-fetch';
-import pkg from 'api-qasim'; // Import ytmp4 from api-qasim package
-import yts from 'youtube-yts';
-import ffmpeg from 'fluent-ffmpeg'; // Import fluent-ffmpeg for video to audio conversion
-import { promisify } from 'util';
-import { pipeline } from 'stream';
-import mime from 'mime-types';  // Import mime-types to dynamically determine MIME type
+import yts from 'yt-search'; // For YouTube search
+import ytvHandler from './dl-ytv1.js'; // Import the .ytv handler
+import ytaHandler from './dl-yt1.js'; // Import the .yta handler
 
-const { ytmp4 } = pkg;
-const streamPipeline = promisify(pipeline);
+const handler = async (m, { conn, text, args }) => {
+    if (!text) throw `Please provide a search query. Example: *!yts funny cat videos*`;
 
-// Create __dirname for ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+    const searchQuery = text.trim();
 
-// Custom temporary directory
-const customTmpDir = path.join(__dirname, 'custom_tmp');
-
-// Ensure the custom_tmp directory exists
-if (!fs.existsSync(customTmpDir)) {
-  fs.mkdirSync(customTmpDir);
-}
-
-const handler = async (m, { conn, command, text, args, usedPrefix }) => {
-  if (!text) throw `Give a text to search Example: *${usedPrefix + command}* sefali odia song`;
-  conn.ultra = conn.ultra ? conn.ultra : {};
-  await m.react('🎶');
-  const result = await searchAndDownloadMusic(text);
-  const infoText = `✦ ──『 *ULTRA PLAYER* 』── ⚝ \n\n [ ⭐ Reply the number of the desired search result to get the Audio]. \n\n`;
-
-  const orderedLinks = result.allLinks.map((link, index) => {
-    const sectionNumber = index + 1;
-    const { title, url } = link;
-    return `*${sectionNumber}.* ${title}`;
-  });
-
-  const orderedLinksText = orderedLinks.join('\n\n');
-  const fullText = `${infoText}\n\n${orderedLinksText}`;
-  const { key } = await conn.reply(m.chat, fullText, m);
-  conn.ultra[m.sender] = {
-    result,
-    key,
-    timeout: setTimeout(() => {
-      conn.sendMessage(m.chat, {
-        delete: key,
-      });
-      delete conn.ultra[m.sender];
-    }, 150 * 1000),
-  };
-};
-
-handler.before = async (m, { conn }) => {
-  conn.ultra = conn.ultra ? conn.ultra : {};
-  if (m.isBaileys || !(m.sender in conn.ultra)) return;
-  const { result, key, timeout } = conn.ultra[m.sender];
-
-  if (!m.quoted || m.quoted.id !== key.id || !m.text) return;
-  const choice = m.text.trim();
-  const inputNumber = Number(choice);
-  if (inputNumber >= 1 && inputNumber <= result.allLinks.length) {
-    const selectedUrl = result.allLinks[inputNumber - 1].url;
-
+    let searchResult;
     try {
-      // Fetch video details using ytmp4
-      const response = await ytmp4(selectedUrl);
-
-      // Validate response and ensure we have a video URL
-      if (!response || !response.video) {
-        throw new Error('No video URL found.');
-      }
-
-      const videoUrl = response.video;
-
-      // Fetch the video file buffer
-      const mediaResponse = await fetchWithRetry(videoUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
-          'Accept': 'application/json, text/plain, */*',
-        },
-      });
-
-      const contentType = mediaResponse.headers.get('content-type');
-      if (!contentType || !contentType.includes('video')) {
-        throw new Error('Invalid content type received');
-      }
-
-      const arrayBuffer = await mediaResponse.arrayBuffer();
-      const mediaBuffer = Buffer.from(arrayBuffer);
-      if (mediaBuffer.length === 0) throw new Error('Downloaded file is empty');
-
-      // Create a temporary file for the video in the custom directory
-      const videoPath = path.join(customTmpDir, 'video.mp4');
-      fs.writeFileSync(videoPath, mediaBuffer);
-
-      // Convert the video to audio (MP3 format) using ffmpeg
-      const audioPath = path.join(customTmpDir, 'audio.mp3');
-
-      // Convert video to audio and send only the audio
-      ffmpeg(videoPath)
-        .audioCodec('libmp3lame')
-        .audioBitrate(128)
-        .toFormat('mp3')
-        .on('start', () => {})
-        .on('progress', () => {})
-        .on('stderr', () => {})
-        .on('end', async () => {
-          // Ensure audio file exists and is not empty
-          if (fs.existsSync(audioPath) && fs.statSync(audioPath).size > 0) {
-            const caption = `*Title:* ${response.title || 'No Title'}\n` +
-                            `*Author:* ${response.author || 'Unknown'}\n` +
-                            `*Duration:* ${response.duration || 'Unknown'}\n` +
-                            `*Views:* ${response.views || '0'}\n` +
-                            `*Uploaded on:* ${response.upload || 'Unknown Date'}`;
-
-            // Send the converted audio only, no video
-            const mimeType = mime.lookup(audioPath) || 'audio/mpeg';
-            await conn.sendFile(m.chat, audioPath, 'audio.mp3', caption, m, false, {
-              mimetype: mimeType,
-              ptt: false,
-            });
-          } else {
-            console.error('Audio file is empty or not found!');
-            m.reply('Failed to convert video to audio. Please try again later.');
-          }
-
-          // Clean up the temporary video and audio files immediately
-          fs.unlinkSync(videoPath); // Delete the video file after conversion
-          fs.unlinkSync(audioPath); // Delete the audio file after sending
-        })
-        .on('error', (err) => {
-          m.reply('An error occurred while converting the video to audio. Please try again later.');
-        })
-        .save(audioPath); // Save audio file
+        searchResult = await yts(searchQuery); // Perform the search
     } catch (error) {
-      console.error('Error fetching video:', error.message);
-      await m.reply('An error occurred while fetching the video. Please try again later.');
-      await m.react('❌');
+        console.error('Error fetching YouTube search results:', error);
+        throw `An error occurred while searching. Please try again later.`;
     }
-  } else {
-    m.reply(
-      'Invalid sequence number. Please select the appropriate number from the list above.\nBetween 1 to ' +
-        result.allLinks.length
-    );
-  }
+
+    if (!searchResult || !searchResult.videos || !searchResult.videos.length) {
+        await conn.reply(m.chat, `No results found for "${searchQuery}".`, m);
+        return;
+    }
+
+    const { videos } = searchResult; // Assign videos from searchResult
+
+    // Prepare the list of video titles
+    const resultsText = videos
+        .map((video, index) => `*${index + 1}.* ${video.title} (${video.timestamp})\n🔗 https://youtu.be/${video.videoId}`)
+        .join('\n\n');
+
+    const fullText = `🔍 *Search Results for:* "${searchQuery}"\n\n${resultsText}\n\nReply with the number of the video you want to download.`;
+
+    // Send the list of results
+    const { key } = await conn.reply(m.chat, fullText, m);
+
+    // Store search results for the user
+    conn.youtubeSearch = conn.youtubeSearch || {};
+    conn.youtubeSearch[m.sender] = {
+        videos,
+        key,
+        timeout: setTimeout(() => {
+            delete conn.youtubeSearch[m.sender];
+            conn.reply(m.chat, 'Search session expired. Please try again.', m);
+        }, 150 * 1000), // 2.5-minute timeout
+    };
 };
 
-handler.help = ['play'];
-handler.tags = ['downloader'];
-handler.command = ['play', 'song', 'spotify', 'playsong', 'ytplay'];
+// Unified handler for processing replies
+handler.before = async (m, { conn }) => {
+    conn.youtubeSearch = conn.youtubeSearch || {};
+    conn.youtubeDownloadSession = conn.youtubeDownloadSession || {};
 
+    // Check if the user is selecting a video
+    if (conn.youtubeSearch[m.sender]) {
+        const { videos, key, timeout } = conn.youtubeSearch[m.sender];
+        if (!m.quoted || m.quoted.id !== key.id || !m.text) return;
+
+        const selectedNumber = parseInt(m.text.trim(), 10);
+        if (isNaN(selectedNumber) || selectedNumber < 1 || selectedNumber > videos.length) {
+            await conn.reply(m.chat, 'Invalid choice. Please select a valid number from the list.', m);
+            return;
+        }
+
+        clearTimeout(timeout); // Clear timeout as user responded
+        delete conn.youtubeSearch[m.sender]; // Clear session
+
+        // Get the selected video's URL
+        const selectedVideo = videos[selectedNumber - 1];
+        const selectedUrl = `https://youtu.be/${selectedVideo.videoId}`;
+
+        // Prepare download options
+        const optionsText = `Choose a format to download:\n1. Video\n2. Audio\n\nReply with the number (1 or 2).`;
+        await conn.reply(m.chat, optionsText, m);
+
+        // Store the selected URL for the next choice
+        conn.youtubeDownloadSession[m.sender] = {
+            selectedUrl,
+            timeout: setTimeout(() => {
+                delete conn.youtubeDownloadSession[m.sender];
+                conn.reply(m.chat, 'Download session expired. Please try again.', m);
+            }, 150 * 1000), // 2.5-minute timeout
+        };
+        return;
+    }
+
+    // Check if the user is selecting video or audio download
+    if (conn.youtubeDownloadSession[m.sender]) {
+        const { selectedUrl, timeout } = conn.youtubeDownloadSession[m.sender];
+        if (!m.text) return;
+
+        const choice = parseInt(m.text.trim(), 10);
+        if (choice === 1) {
+            clearTimeout(timeout);
+            delete conn.youtubeDownloadSession[m.sender];
+            await ytvHandler(m, { conn, text: selectedUrl, args: [selectedUrl] });
+        } else if (choice === 2) {
+            clearTimeout(timeout);
+            delete conn.youtubeDownloadSession[m.sender];
+            await ytaHandler(m, { conn, text: selectedUrl, args: [selectedUrl] });
+        } else {
+            await conn.reply(m.chat, 'Invalid choice. Reply with 1 for video or 2 for audio.', m);
+        }
+    }
+};
+
+handler.help = ['yts'];
+handler.tags = ['search'];
+handler.command = ['yts']; // Command for video search
 export default handler;
-
-async function searchAndDownloadMusic(query) {
-  try {
-    const { videos } = await yts(query);
-    if (!videos.length) return 'Sorry, no video results were found for this search.';
-
-    const allLinks = videos.map(video => ({
-      title: video.title,
-      url: video.url,
-    }));
-
-    const jsonData = {
-      title: videos[0].title,
-      description: videos[0].description,
-      duration: videos[0].duration,
-      author: videos[0].author.name,
-      allLinks: allLinks,
-      videoUrl: videos[0].url,
-      thumbnail: videos[0].thumbnail,
-    };
-
-    return jsonData;
-  } catch (error) {
-    return 'Error: ' + error.message;
-  }
-}
-
-async function fetchWithRetry(url, options, retries = 3) {
-  for (let i = 0; i < retries; i++) {
-    const response = await fetch(url, options);
-    if (response.ok) return response;
-  }
-  throw new Error('Failed to fetch media content after retries');
-                    }
