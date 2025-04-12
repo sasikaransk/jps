@@ -4,8 +4,8 @@ let handler = async (m, { conn }) => {
     return; // or handle the error as appropriate
   }
 
-  const ownerNumber = process.env.OWNERS || global.owner[0] ? global.owner[0][0] : '923444844060'; // Fallback
-  const OwnerName = process.env.OWNER_NAME || 'QASIM ALI';
+  const ownerNumber = process.env.OWNERS || global.owner[0] ? global.owner[0][0] : '94719695046'; // Fallback
+  const OwnerName = process.env.OWNER_NAME || 'Sasikaran';
   let vcard = `BEGIN:VCARD
 VERSION:3.0
 N:;${ownerNumber};;;
